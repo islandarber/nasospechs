@@ -49,7 +49,7 @@ export const updateProject = async (req, res) => {
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: 'users' },  // specify the folder in Cloudinary
+          { folder: 'PorjectsNasos' },  // specify the folder in Cloudinary
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
