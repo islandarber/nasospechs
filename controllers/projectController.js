@@ -4,7 +4,7 @@ import cloudinary from '../config/cloudinary.js';
 // Get all projects with their categories
 export const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find().populate('category');
+    const projects = await Project.find().populate('categories');
     res.status(200).json(projects);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching projects', error: error.message });
@@ -15,7 +15,7 @@ export const getProjects = async (req, res) => {
 export const getProjectsByCategory = async (req, res) => {
   const { categoryId } = req.params;
   try {
-    const projects = await Project.find({ categories: categoryId }).populate('category');
+    const projects = await Project.find({ categories: categoryId }).populate('categories');
     if (projects.length === 0) {
       return res.status(404).json({ message: 'No projects found for this category' });
     }
@@ -28,7 +28,7 @@ export const getProjectsByCategory = async (req, res) => {
 // Get project by ID
 export const getProjectById = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id).populate('category');
+    const project = await Project.findById(req.params.id).populate('categories');
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
@@ -40,7 +40,7 @@ export const getProjectById = async (req, res) => {
 
 export const getFeaturedProjects = async (req, res) => {
   try {
-    const projects = await Project.find({ featured: true }).populate('category');
+    const projects = await Project.find({ featured: true }).populate('categories');
     if (projects.length === 0) {
       return res.status(404).json({ message: 'No featured projects found' });
     }
