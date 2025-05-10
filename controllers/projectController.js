@@ -15,7 +15,7 @@ export const getProjects = async (req, res) => {
 export const getProjectsByCategory = async (req, res) => {
   const { categoryId } = req.params;
   try {
-    const projects = await Project.find({ category: categoryId }).populate('category');
+    const projects = await Project.find({ categories: categoryId }).populate('category');
     if (projects.length === 0) {
       return res.status(404).json({ message: 'No projects found for this category' });
     }
