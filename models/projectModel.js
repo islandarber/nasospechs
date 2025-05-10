@@ -4,7 +4,7 @@ const projectSchema = new mongoose.Schema({
   title: { type: String, required: true },
   img: { type: String, required: true },
   video: String,
-  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true }],
   roles: { type: String, required: true },
   info: String,
   additionalMedia: [String],
