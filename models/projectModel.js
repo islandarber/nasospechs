@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const projectSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  img: { type: String, required: true },
+  img: { type: String},
   video: String,
   categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true }],
   roles: { type: String, required: true },
