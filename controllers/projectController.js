@@ -54,34 +54,38 @@ export const getFeaturedProjects = async (req, res) => {
 // Create a new project
 export const createProject = async (req, res) => {
   try {
-    // Upload image using Cloudinary's upload_stream method
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'ProjectsNasos' },  // specify the folder in Cloudinary
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary upload error:', error);
-            reject(new Error('Error uploading image to Cloudinary'));
-          } else {
-            resolve(result);
+    let imageUrl = null;
+
+    // If an image file was uploaded, handle the upload to Cloudinary
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'ProjectsNasos' },  // specify the folder in Cloudinary
+          (error, result) => {
+            if (error) {
+              console.error('Cloudinary upload error:', error);
+              reject(new Error('Error uploading image to Cloudinary'));
+            } else {
+              resolve(result);
+            }
           }
-        }
-      );
+        );
 
-      // Send the image buffer to the upload stream
-      uploadStream.end(req.file.buffer);  // Upload the image buffer
-    });
+        uploadStream.end(req.file.buffer); // Only called if req.file exists
+      });
 
-    // Create a new project with the uploaded image URL
+      imageUrl = result.secure_url;
+    }
+
+    // Create the new project with or without an image URL
     const project = new Project({
       ...req.body,
-      img: result.secure_url,  // Cloudinary URL for the uploaded image
+      img: imageUrl,  // Can be null if no image uploaded
     });
 
     // Save the project to the database
     const newProject = await project.save();
 
-    // Send the response with the newly created project
     res.status(201).json(newProject);
     console.log('New project created:', newProject);
   } catch (error) {
@@ -89,6 +93,7 @@ export const createProject = async (req, res) => {
     console.log('Error:', error.message);
   }
 };
+
 
 // Update a project
 export const updateProject = async (req, res) => {
