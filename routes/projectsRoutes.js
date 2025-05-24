@@ -7,9 +7,9 @@ const projectRouter = express.Router();
 projectRouter.get('/', getProjects);
 projectRouter.get('/featured', getFeaturedProjects);
 projectRouter.get('/category/:categoryId', getProjectsByCategory);
-projectRouter.post('/',upload.single('img'), createProject);
 projectRouter.get('/:id', getProjectById);
-projectRouter.put('/:id',upload.single('img'), updateProject);
+projectRouter.post('/', upload.array('mediaFiles'), createProject);
+projectRouter.put('/:id', upload.array('mediaFiles'), updateProject);
 projectRouter.delete('/:id', deleteProject);
 
 export default projectRouter;

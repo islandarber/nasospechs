@@ -1,6 +1,7 @@
 import Project from '../models/projectModel.js';
 import cloudinary from '../config/cloudinary.js';
 
+
 // Get all projects with their categories
 export const getProjects = async (req, res) => {
   try {
@@ -54,38 +55,38 @@ export const getFeaturedProjects = async (req, res) => {
 // Create a new project
 export const createProject = async (req, res) => {
   try {
-    let imageUrl = null;
+    const media = [];
 
-    // If an image file was uploaded, handle the upload to Cloudinary
-    if (req.file) {
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: 'ProjectsNasos' },  // specify the folder in Cloudinary
-          (error, result) => {
-            if (error) {
-              console.error('Cloudinary upload error:', error);
-              reject(new Error('Error uploading image to Cloudinary'));
-            } else {
-              resolve(result);
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'ProjectsNasos' },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary upload error:', error);
+                reject(new Error('Error uploading image to Cloudinary'));
+              } else {
+                resolve(result);
+              }
             }
-          }
-        );
+          );
+          uploadStream.end(file.buffer);
+        });
 
-        uploadStream.end(req.file.buffer); // Only called if req.file exists
-      });
-
-      imageUrl = result.secure_url;
+        media.push({
+          type: 'image',  // since you only upload images to Cloudinary here
+          url: result.secure_url,
+        });
+      }
     }
 
-    // Create the new project with or without an image URL
     const project = new Project({
       ...req.body,
-      img: imageUrl,  // Can be null if no image uploaded
+      media,  // assign media array instead of img or video
     });
 
-    // Save the project to the database
     const newProject = await project.save();
-
     res.status(201).json(newProject);
     console.log('New project created:', newProject);
   } catch (error) {
@@ -95,55 +96,62 @@ export const createProject = async (req, res) => {
 };
 
 
+
 // Update a project
 export const updateProject = async (req, res) => {
   const { id } = req.params;
-  let imageUrl = '';  // Initialize imageUrl to store the new image URL
 
   try {
-    // If a new image is uploaded
-    if (req.file) {
-      // Upload image using Cloudinary's upload_stream method
-      const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: 'ProjectsNasos' },  // specify the folder in Cloudinary
-          (error, result) => {
-            if (error) {
-              console.error('Cloudinary upload error:', error);
-              reject(new Error('Error uploading image to Cloudinary'));
-            } else {
-              resolve(result);
+    let newMedia = [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'ProjectsNasos' },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary upload error:', error);
+                reject(new Error('Error uploading image to Cloudinary'));
+              } else {
+                resolve(result);
+              }
             }
-          }
-        );
+          );
+          uploadStream.end(file.buffer);
+        });
 
-        // Send the image buffer to the upload stream
-        uploadStream.end(req.file.buffer);  // Upload the image buffer
-      });
-
-      imageUrl = result.secure_url;  // Set the imageUrl to the secure URL of the uploaded image
+        newMedia.push({
+          type: 'image',
+          url: result.secure_url,
+        });
+      }
     }
 
-    // Update the project with new data, including image if uploaded
-    const updatedProject = await Project.findByIdAndUpdate(
-      id, 
-      { 
-        ...req.body,  // spread other fields
-        img: imageUrl ? imageUrl : undefined  // If no new image, don't overwrite the old image field
-      }, 
-      { new: true }  // Return the updated document
-    );
-
-    if (!updatedProject) {
+    // Fetch existing project to get current media
+    const existingProject = await Project.findById(id);
+    if (!existingProject) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Respond with the updated project
+    // Merge existing media with newly uploaded media
+    const mergedMedia = existingProject.media ? [...existingProject.media, ...newMedia] : newMedia;
+
+    // Build update object — override media only if we have new media or keep existing if none sent
+    const updateData = {
+      ...req.body,
+      media: mergedMedia,
+    };
+
+    // Update project
+    const updatedProject = await Project.findByIdAndUpdate(id, updateData, { new: true });
+
     res.status(200).json(updatedProject);
   } catch (error) {
     res.status(400).json({ message: 'Error updating project', error: error.message });
   }
 };
+
 
 // Delete a project
 export const deleteProject = async (req, res) => {  
