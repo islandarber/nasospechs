@@ -120,63 +120,40 @@ export const updateProject = async (req, res) => {
   const { id } = req.params;
 
   try {
-    let newMedia = [];
+    const updatedMedia = [];
 
-    // 1. Upload new image files (if any)
+    // Add video URLs
+    if (Array.isArray(req.body.media)) {
+      for (const item of req.body.media) {
+        if (typeof item === 'string' && item.startsWith('http')) {
+          updatedMedia.push({ type: 'video', url: item });
+        }
+      }
+    } else if (typeof req.body.media === 'string' && req.body.media.startsWith('http')) {
+      updatedMedia.push({ type: 'video', url: req.body.media });
+    }
+
+    // Upload new image files
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const result = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { folder: 'ProjectsNasos' },
             (error, result) => {
-              if (error) {
-                console.error('Cloudinary upload error:', error);
-                reject(new Error('Error uploading image to Cloudinary'));
-              } else {
-                resolve(result);
-              }
+              if (error) reject(error);
+              else resolve(result);
             }
           );
           uploadStream.end(file.buffer);
         });
 
-        newMedia.push({
-          type: 'image',
-          url: result.secure_url,
-        });
+        updatedMedia.push({ type: 'image', url: result.secure_url });
       }
     }
 
-    // 2. Add any new video URLs
-    if (Array.isArray(req.body.media)) {
-      for (const item of req.body.media) {
-        if (typeof item === 'string' && item.startsWith('http')) {
-          newMedia.push({
-            type: 'video',
-            url: item,
-          });
-        }
-      }
-    } else if (typeof req.body.media === 'string' && req.body.media.startsWith('http')) {
-      // In case it's a single video URL
-      newMedia.push({
-        type: 'video',
-        url: req.body.media,
-      });
-    }
-
-    // 3. Get existing project and merge media
-    const existingProject = await Project.findById(id);
-    if (!existingProject) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
-
-    const mergedMedia = existingProject.media ? [...existingProject.media, ...newMedia] : newMedia;
-
-    // 4. Build update object
     const updateData = {
       ...req.body,
-      media: mergedMedia,
+      media: updatedMedia,
     };
 
     const updatedProject = await Project.findByIdAndUpdate(id, updateData, { new: true });
