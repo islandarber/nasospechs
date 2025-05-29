@@ -1,7 +1,6 @@
 import Project from '../models/projectModel.js';
 import cloudinary from '../config/cloudinary.js';
 
-
 // Get all projects with their categories
 export const getProjects = async (req, res) => {
   try {
@@ -12,7 +11,6 @@ export const getProjects = async (req, res) => {
   }
 };
 
-// Get projects by category id
 export const getProjectsByCategory = async (req, res) => {
   const { categoryId } = req.params;
   try {
@@ -26,7 +24,6 @@ export const getProjectsByCategory = async (req, res) => {
   }
 };
 
-// Get project by ID
 export const getProjectById = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id).populate('categories');
@@ -48,56 +45,40 @@ export const getFeaturedProjects = async (req, res) => {
     res.status(200).json(projects);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching featured projects', error: error.message });
-    console.log(error);
   }
 };
 
-// Create a new project
 export const createProject = async (req, res) => {
   try {
     const media = [];
 
-    // 1. Handle image uploads
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const result = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { folder: 'ProjectsNasos' },
             (error, result) => {
-              if (error) {
-                console.error('Cloudinary upload error:', error);
-                reject(new Error('Error uploading image to Cloudinary'));
-              } else {
-                resolve(result);
-              }
+              if (error) reject(error);
+              else resolve(result);
             }
           );
           uploadStream.end(file.buffer);
         });
 
-        media.push({
-          type: 'image',
-          url: result.secure_url,
-        });
+        media.push({ type: 'image', url: result.secure_url });
       }
     }
 
-    // 2. Handle video URLs
     if (Array.isArray(req.body.media)) {
       for (const item of req.body.media) {
         if (typeof item === 'string' && item.startsWith('http')) {
-          media.push({
-            type: 'video',
-            url: item,
-          });
+          const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item);
+          media.push({ type: isImage ? 'image' : 'video', url: item });
         }
       }
     } else if (typeof req.body.media === 'string' && req.body.media.startsWith('http')) {
-      // In case a single video URL was sent
-      media.push({
-        type: 'video',
-        url: req.body.media,
-      });
+      const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(req.body.media);
+      media.push({ type: isImage ? 'image' : 'video', url: req.body.media });
     }
 
     const project = new Project({
@@ -107,14 +88,10 @@ export const createProject = async (req, res) => {
 
     const newProject = await project.save();
     res.status(201).json(newProject);
-    console.log('New project created:', newProject);
   } catch (error) {
     res.status(400).json({ message: error.message });
-    console.log('Error:', error.message);
   }
 };
-
-
 
 export const updateProject = async (req, res) => {
   const { id } = req.params;
@@ -122,18 +99,18 @@ export const updateProject = async (req, res) => {
   try {
     const updatedMedia = [];
 
-    // Add video URLs
     if (Array.isArray(req.body.media)) {
       for (const item of req.body.media) {
         if (typeof item === 'string' && item.startsWith('http')) {
-          updatedMedia.push({ type: 'video', url: item });
+          const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item);
+          updatedMedia.push({ type: isImage ? 'image' : 'video', url: item });
         }
       }
     } else if (typeof req.body.media === 'string' && req.body.media.startsWith('http')) {
-      updatedMedia.push({ type: 'video', url: req.body.media });
+      const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(req.body.media);
+      updatedMedia.push({ type: isImage ? 'image' : 'video', url: req.body.media });
     }
 
-    // Upload new image files
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const result = await new Promise((resolve, reject) => {
@@ -163,9 +140,7 @@ export const updateProject = async (req, res) => {
   }
 };
 
-
-// Delete a project
-export const deleteProject = async (req, res) => {  
+export const deleteProject = async (req, res) => {
   try {
     const project = await Project.findByIdAndDelete(req.params.id);
     if (!project) {
